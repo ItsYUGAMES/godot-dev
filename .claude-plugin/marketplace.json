@@ -1,0 +1,14 @@
+{
+  "name": "godot-dev",
+  "description": "Godot 4.7 game development plugin for Claude Code.",
+  "owner": {
+    "name": "Zhenyu Yang"
+  },
+  "plugins": [
+    {
+      "name": "godot-dev",
+      "source": "./",
+      "description": "One router skill for Godot 4.7, engine-backed verification scripts, and the godot-ai MCP server installed per project."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "godot-ai": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/godot-ai-mcp.sh"]
+    }
+  }
+}
