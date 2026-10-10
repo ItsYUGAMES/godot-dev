@@ -2,7 +2,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A Claude Code plugin for building games in Godot 4.7.
+A plugin for building games in Godot 4.7 with Claude Code, Codex, Cursor, GitHub Copilot CLI,
+Gemini CLI or Antigravity CLI, plus a skill you can copy into other agents.
 
 It adds three things. There is one skill that Claude loads when you work on a Godot project; it
 routes each task to a short reference file instead of pulling a whole rulebook into context. There
@@ -16,7 +17,7 @@ Most of what the plugin does is make those mistakes visible before they reach yo
 
 ## Requirements
 
-- Claude Code with plugin support
+- One of the agents listed under Install
 - Godot 4.7 or newer, found through `godot` on your PATH, the `GODOT` environment variable, or
   `/Applications/Godot*.app` on macOS
 - Python 3.9 or newer, or [uv](https://docs.astral.sh/uv/) (the godot-ai server itself needs uv)
@@ -69,6 +70,85 @@ automatically. Codex doesn't expand `${CLAUDE_PLUGIN_ROOT}` in MCP commands, so 
 finds the launcher under `$CODEX_HOME/plugins/cache` (default `~/.codex`). The duplicate check
 reads `[mcp_servers.godot-ai]` from `$CODEX_HOME/config.toml` and the project's
 `.codex/config.toml` instead of Claude's config.
+
+### Cursor
+
+Cursor installs plugins from a marketplace. A team admin adds this repository under Dashboard,
+Plugins & MCPs, Add Marketplace, Import from Repo, and developers then install godot-dev from
+Customize. For yourself only, clone it into Cursor's local plugin folder and run Developer: Reload
+Window:
+
+```bash
+git clone https://github.com/ItsYUGAMES/godot-dev.git ~/.cursor/plugins/local/godot-dev
+```
+
+Cursor runs plugin hooks from the plugin folder and passes the workspace as `CLAUDE_PROJECT_DIR`,
+which the hook uses to find `project.godot`. The duplicate check reads `~/.cursor/mcp.json` and
+the project's `.cursor/mcp.json`. Not yet tested in a live Cursor session.
+
+### GitHub Copilot CLI
+
+```bash
+copilot plugin marketplace add ItsYUGAMES/godot-dev
+```
+
+```bash
+copilot plugin install godot-dev@godot-dev
+```
+
+Copilot reads `.plugin/plugin.json`. The duplicate check reads `~/.copilot/mcp-config.json` and
+the project's `.mcp.json` and `.github/mcp.json`. Not yet tested.
+
+### Gemini CLI
+
+```bash
+gemini extensions install https://github.com/ItsYUGAMES/godot-dev
+```
+
+Gemini loads the skill from `skills/`, the MCP server from `gemini-extension.json`, and the same
+`hooks/hooks.json` that Claude Code uses. The duplicate check reads `~/.gemini/settings.json` and
+the project's `.gemini/settings.json`. Not yet tested. Google replaced Gemini CLI with Antigravity
+CLI for unpaid and Google One users on June 18, 2026 ([notice](https://geminicli.com/docs/extensions/reference/)).
+
+### Antigravity CLI
+
+```bash
+agy plugin install https://github.com/ItsYUGAMES/godot-dev
+```
+
+This installs the skill only. Antigravity doesn't document its MCP or hook format yet, so register
+godot-ai yourself as described under Other agents. Not yet tested.
+
+### Other agents
+
+These agents load Agent Skills folders but have no plugin format this repository can target, so
+copy `skills/godot` into the agent's skill folder:
+
+| Agent | Global skill folder | Source (checked 2026-10-10) |
+|---|---|---|
+| OpenCode | `~/.config/opencode/skills/` (also reads `~/.claude/skills/` and `~/.agents/skills/`) | [docs](https://opencode.ai/docs/skills/) |
+| Kiro | `~/.kiro/skills/` | [docs](https://kiro.dev/docs/skills/) |
+| Windsurf | `~/.codeium/windsurf/skills/` | [docs](https://docs.devin.ai/desktop/cascade/skills) |
+| Cline | `~/.cline/skills/` (turn on Skills under Settings, Features) | [docs](https://docs.cline.bot/customization/skills) |
+| Amp | `~/.config/agents/skills/`, or `amp skill add` | [docs](https://ampcode.com/docs/customize/skills) |
+| Zed, JetBrains Junie, Jules, Qoder, Grok Build | not verified: wherever the agent loads `SKILL.md` folders | |
+
+```bash
+git clone https://github.com/ItsYUGAMES/godot-dev.git
+```
+
+```bash
+cp -r godot-dev/skills/godot ~/.kiro/skills/
+```
+
+For the MCP server, register `bash /absolute/path/to/godot-dev/scripts/godot-ai-mcp.sh standalone` as a
+stdio server that starts in your game project (or with `CLAUDE_PROJECT_DIR` set to it); outside a Godot
+project it serves no tools. Without a hook nothing installs the add-on for you, so run this once
+inside the project:
+
+```bash
+bash /absolute/path/to/godot-dev/scripts/session-start.sh standalone
+```
 
 ## What happens in a Godot project
 
@@ -154,7 +234,7 @@ Measured with `claude plugin details`:
 
 ## Settings
 
-Set these as environment variables before starting Claude Code:
+Set these as environment variables before starting your agent:
 
 | Variable | Effect |
 |---|---|
@@ -171,6 +251,10 @@ Running `python3 scripts/godot_dev.py status` inside a project prints what the p
 ```
 .claude-plugin/        plugin and marketplace manifests
 .codex-plugin/         Codex manifest (with .codex-mcp.json and hooks/codex-hooks.json)
+.cursor-plugin/        Cursor manifest and marketplace (with .cursor-mcp.json and hooks/cursor-hooks.json)
+.plugin/               GitHub Copilot CLI manifest (with .copilot-mcp.json and hooks/copilot-hooks.json)
+gemini-extension.json  Gemini CLI extension (shares hooks/hooks.json with Claude Code)
+plugin.json            Antigravity CLI manifest
 skills/godot/          SKILL.md (the router), 21 reference files, gd.py and its GDScript helpers
 hooks/, scripts/       SessionStart hook, add-on installer, MCP launcher
 scripts/vendor/        godot-ai's release verifier (MIT, pinned by hash)
