@@ -1,0 +1,5 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "godot-dev",
+  "description": "Godot 4.7 game development: a context-light router skill and headless verification gates."
+}

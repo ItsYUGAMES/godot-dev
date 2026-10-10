@@ -253,6 +253,21 @@ for spec in 'cursor .cursor-mcp.json ${CURSOR_PLUGIN_ROOT} hooks/cursor-hooks.js
 	check "$h: hook from plugin cwd finds the project via CLAUDE_PROJECT_DIR" \
 		'field "$o" "d[\"$key\"]" | grep -q "Godot 4.7 project detected"' "$o"
 done
+# Root plugin.json is Antigravity's (its schema forbids other keys). Copilot reads .plugin/ before it,
+# and an Agent Plugins $schema there would switch Cursor/Copilot into Agent Plugins mode.
+check "antigravity: root plugin.json keys within \$schema/name/description" \
+	'[ "$(js plugin.json "sorted(set(d) - {\"\$schema\", \"name\", \"description\"})")" = "[]" ] && [ "$(js plugin.json "d[\"name\"]")" = godot-dev ]'
+check "antigravity: root plugin.json is not an Agent Plugins manifest" '! js plugin.json "d[\"\$schema\"]" | grep -q agent-plugins.org'
+check "copilot: .plugin/plugin.json shadows root plugin.json" '[ -f "$PLUGIN/.plugin/plugin.json" ]'
+for m in .claude-plugin/plugin.json .codex-plugin/plugin.json .cursor-plugin/plugin.json .plugin/plugin.json gemini-extension.json; do
+	check "version: $m is 0.3.0" '[ "$(js "$m" "d[\"version\"]")" = 0.3.0 ]'
+done
+readme_shape() { python3 -I -c '
+import re, sys
+t = open(sys.argv[1], encoding="utf-8").read()
+print(len(re.findall(r"^#+ ", t, re.M)), [b for b in re.findall(r"```bash\n(.*?)```", t, re.S)])' "$PLUGIN/$1"; }
+check "README.zh-CN.md: same headings count and bash blocks as README.md" \
+	'[ "$(readme_shape README.md)" = "$(readme_shape README.zh-CN.md)" ]'
 check "gemini-extension.json: name, MCP cwd and launcher" \
 	'[ "$(js gemini-extension.json "d[\"name\"]")" = godot-dev ] && [ "$(js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"cwd\"]")" = "\${workspacePath}" ] && js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"args\"]" | grep -q "godot-ai-mcp.sh.*gemini"'
 
