@@ -258,7 +258,7 @@ def codex_entry(path: Path) -> dict | None:
                       read_text(path), re.M | re.S)
     if not match:
         return None
-    args = re.search(r"^args\s*=\s*\[(.*?)\]", match.group(1), re.M | re.S)
+    args = re.search(r"^args\s*=\s*\[(.*?)\]\s*$", match.group(1), re.M | re.S)  # args may hold "argv[1:]"
     return {"args": re.findall(r"""["']([^"']*)["']""", args.group(1)) if args else []}
 
 

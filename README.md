@@ -49,6 +49,25 @@ claude --plugin-dir ./godot-dev
 Update with `claude plugin update godot-dev@godot-dev`. Remove it with
 `claude plugin uninstall godot-dev@godot-dev`.
 
+### Codex
+
+The same repository works as a Codex plugin marketplace:
+
+```bash
+codex plugin marketplace add ItsYUGAMES/godot-dev
+```
+
+```bash
+codex plugin add godot-dev@godot-dev
+```
+
+Codex runs plugin hooks only after you trust them, so open `/hooks` in a new session and trust the
+godot-dev SessionStart hook; until then the skill and MCP server work but nothing is installed
+automatically. Codex doesn't expand `${CLAUDE_PLUGIN_ROOT}` in MCP commands, so `.codex-mcp.json`
+finds the launcher under `$CODEX_HOME/plugins/cache` (default `~/.codex`). The duplicate check
+reads `[mcp_servers.godot-ai]` from `$CODEX_HOME/config.toml` and the project's
+`.codex/config.toml` instead of Claude's config.
+
 ## What happens in a Godot project
 
 When a session starts, the hook looks for `project.godot` in the working directory or any parent.
@@ -149,6 +168,7 @@ Running `python3 scripts/godot_dev.py status` inside a project prints what the p
 
 ```
 .claude-plugin/        plugin and marketplace manifests
+.codex-plugin/         Codex manifest (with .codex-mcp.json and hooks/codex-hooks.json)
 skills/godot/          SKILL.md (the router), 21 reference files, gd.py and its GDScript helpers
 hooks/, scripts/       SessionStart hook, add-on installer, MCP launcher
 scripts/vendor/        godot-ai's release verifier (MIT, pinned by hash)

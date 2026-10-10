@@ -88,7 +88,7 @@ rm "$P/.mcp.json"
 codex_plan() { (cd "$1" && GODOT_DEV_MCP_DRY_RUN=1 bash "$PLUGIN/scripts/godot-ai-mcp.sh" codex); }
 pl=$(codex_plan "$P")
 check "codex: active without a Codex godot-ai entry" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
-printf '[mcp_servers.godot-ai]\ncommand = "uvx"\nargs = ["--from", "godot-ai==4.2.3", "godot-ai", "attach"]\n\n[mcp_servers.godot-ai.env]\nX = "1"\n' > "$CODEX_HOME/config.toml"
+printf '[mcp_servers.godot-ai]\ncommand = "uvx"\nargs = ["-c", "run(sys.argv[1:])", \047C:/Users/u/uvx.exe\047, "--from", "godot-ai==4.2.3", "godot-ai", "attach"]\n\n[mcp_servers.godot-ai.env]\nX = "1"\n' > "$CODEX_HOME/config.toml"
 pl=$(codex_plan "$P")
 check "codex: inactive when config.toml has godot-ai" \
 	'[ "$(field "$pl" "d[\"active\"]")" = False ] && printf "%s" "$pl" | grep -q "user scope"' "$pl"
