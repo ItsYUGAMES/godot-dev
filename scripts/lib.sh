@@ -60,11 +60,12 @@ mcp_stub() {
 }
 
 # Export GODOT_DEV_HOST from the host name a hook/MCP config passes as $1; unknown names mean Claude.
+# standalone = registered by hand in an agent without a plugin format (README "Other agents").
 # hooks/hooks.json is shared by Claude and Gemini and passes "gemini" in both: Claude sets
 # CLAUDE_PLUGIN_ROOT for plugin hooks, Gemini does not.
 set_host() {
 	case "${1:-}" in
-	codex | cursor | copilot) export GODOT_DEV_HOST=$1 ;;
+	codex | cursor | copilot | standalone) export GODOT_DEV_HOST=$1 ;;
 	gemini) [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || export GODOT_DEV_HOST=gemini ;;
 	esac
 }
@@ -73,7 +74,7 @@ set_host() {
 # Lines must not contain '"' or '\'.
 emit_context() {
 	local body
-	if [ "${GODOT_DEV_HOST:-}" = codex ]; then
+	if [ "${GODOT_DEV_HOST:-}" = codex ] || [ "${GODOT_DEV_HOST:-}" = standalone ]; then
 		printf '%s\n' "$@"
 		return
 	fi

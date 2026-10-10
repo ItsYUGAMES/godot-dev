@@ -108,7 +108,7 @@ gemini extensions install https://github.com/ItsYUGAMES/godot-dev
 Gemini loads the skill from `skills/`, the MCP server from `gemini-extension.json`, and the same
 `hooks/hooks.json` that Claude Code uses. The duplicate check reads `~/.gemini/settings.json` and
 the project's `.gemini/settings.json`. Not yet tested. Google replaced Gemini CLI with Antigravity
-CLI for unpaid and Google One users on June 18, 2026.
+CLI for unpaid and Google One users on June 18, 2026 ([notice](https://geminicli.com/docs/extensions/reference/)).
 
 ### Antigravity CLI
 
@@ -141,13 +141,13 @@ git clone https://github.com/ItsYUGAMES/godot-dev.git
 cp -r godot-dev/skills/godot ~/.kiro/skills/
 ```
 
-For the MCP server, register `bash /absolute/path/to/godot-dev/scripts/godot-ai-mcp.sh` as a stdio
-server that starts in your game project (or with `CLAUDE_PROJECT_DIR` set to it); outside a Godot
+For the MCP server, register `bash /absolute/path/to/godot-dev/scripts/godot-ai-mcp.sh standalone` as a
+stdio server that starts in your game project (or with `CLAUDE_PROJECT_DIR` set to it); outside a Godot
 project it serves no tools. Without a hook nothing installs the add-on for you, so run this once
-inside the project (the `codex` argument only selects plain-text output):
+inside the project:
 
 ```bash
-bash /absolute/path/to/godot-dev/scripts/session-start.sh codex
+bash /absolute/path/to/godot-dev/scripts/session-start.sh standalone
 ```
 
 ## What happens in a Godot project

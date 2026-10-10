@@ -78,7 +78,7 @@ def host() -> str:
 
 def emit_context(text: str) -> None:
     """Print SessionStart context in the shape the host's hook runner reads."""
-    if host() == "codex":
+    if host() in ("codex", "standalone"):
         print(text)
         return
     if host() == "cursor":
@@ -293,6 +293,8 @@ HOST_MCP_CONFIGS = {
 
 def existing_entry(root: Path) -> tuple[str, dict] | None:
     """Another godot-ai MCP entry the user configured (dock Configure / claude mcp add)."""
+    if host() == "standalone":  # registered by hand; the user chose this server explicitly
+        return None
     if host() in HOST_MCP_CONFIGS:
         for scope, rel in HOST_MCP_CONFIGS[host()]:
             data = _load_json((Path.home() if scope == "user" else root) / rel)
@@ -431,7 +433,8 @@ def prewarm(plan: dict) -> str:
     env = clean_env() | {"GODOT_DEV_MARKER": str(marker)}
     subprocess.Popen(["/bin/sh", "-c", script, "sh", *argv], stdout=log, stderr=log,
                      stdin=subprocess.DEVNULL, env=env, start_new_session=True)
-    retry = "start a new Codex session" if host() == "codex" else "reconnect godot-ai in /mcp"
+    retry = {"codex": "start a new Codex session", "standalone": "restart the godot-ai MCP server"}.get(
+        host(), "reconnect godot-ai in /mcp")
     return f" First run: building the godot-ai environment in the background; if its tools are missing, {retry} in ~1 min."
 
 

@@ -152,6 +152,14 @@ mkdir -p "$H/.gemini"; printf '%s' "$entry" > "$H/.gemini/settings.json"
 o=$(cd "$P" && HOME="$H" USERPROFILE="$UP" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/scripts/session-start.sh" gemini | ctx)
 check "gemini arg under Claude ignores Gemini settings" 'printf "%s" "$o" | grep -q "bundled server active"' "$o"
 rm "$H/.gemini/settings.json"
+# standalone: manual MCP registration in a skill-only agent; another host's godot-ai entry must not stub it.
+printf '%s' "$entry" > "$CLAUDE_CONFIG_DIR/.claude.json"
+pl=$(host_plan standalone)
+check "standalone: Claude's godot-ai entry does not stub the server" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
+o=$(cd "$P" && bash "$PLUGIN/scripts/session-start.sh" standalone)
+check "standalone: plain-text context without a Codex hint" \
+	'[ "${o%%(*}" = "Godot 4.7 project detected " ] && ! printf "%s" "$o" | grep -q Codex' "$o"
+rm "$CLAUDE_CONFIG_DIR/.claude.json"
 
 # 4c. Hook output shape per host.
 shape() { (cd "$1" && bash "$PLUGIN/scripts/session-start.sh" ${2:+"$2"}); }

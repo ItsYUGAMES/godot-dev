@@ -83,7 +83,7 @@ Copilot 读取 `.plugin/plugin.json`。重复检查读取 `~/.copilot/mcp-config
 gemini extensions install https://github.com/ItsYUGAMES/godot-dev
 ```
 
-Gemini 从 `skills/` 加载 skill，从 `gemini-extension.json` 加载 MCP 服务器，并使用与 Claude Code 相同的 `hooks/hooks.json`。重复检查读取 `~/.gemini/settings.json` 和项目的 `.gemini/settings.json`。尚未测试。2026 年 6 月 18 日起，Google 已用 Antigravity CLI 替代面向免费用户和 Google One 用户的 Gemini CLI。
+Gemini 从 `skills/` 加载 skill，从 `gemini-extension.json` 加载 MCP 服务器，并使用与 Claude Code 相同的 `hooks/hooks.json`。重复检查读取 `~/.gemini/settings.json` 和项目的 `.gemini/settings.json`。尚未测试。2026 年 6 月 18 日起，Google 已用 Antigravity CLI 替代面向免费用户和 Google One 用户的 Gemini CLI（[公告](https://geminicli.com/docs/extensions/reference/)）。
 
 ### Antigravity CLI
 
@@ -114,10 +114,10 @@ git clone https://github.com/ItsYUGAMES/godot-dev.git
 cp -r godot-dev/skills/godot ~/.kiro/skills/
 ```
 
-MCP 服务器方面，把 `bash /absolute/path/to/godot-dev/scripts/godot-ai-mcp.sh` 注册为 stdio 服务器，并让它在你的游戏项目目录下启动（或者把 `CLAUDE_PROJECT_DIR` 设为该目录）；不在 Godot 项目里时它不提供任何工具。没有 hook 就不会自动安装插件，所以要在项目里手动运行一次下面的命令（`codex` 参数只是让它输出纯文本）：
+MCP 服务器方面，把 `bash /absolute/path/to/godot-dev/scripts/godot-ai-mcp.sh standalone` 注册为 stdio 服务器，并让它在你的游戏项目目录下启动（或者把 `CLAUDE_PROJECT_DIR` 设为该目录）；不在 Godot 项目里时它不提供任何工具。没有 hook 就不会自动安装插件，所以要在项目里手动运行一次下面的命令：
 
 ```bash
-bash /absolute/path/to/godot-dev/scripts/session-start.sh codex
+bash /absolute/path/to/godot-dev/scripts/session-start.sh standalone
 ```
 
 ## 在 Godot 项目里会发生什么
