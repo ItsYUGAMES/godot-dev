@@ -1,0 +1,2 @@
+# LF everywhere: bash scripts break on CRLF, and scripts/vendor/release_verify.py is pinned by SHA-256.
+* text=auto eol=lf
