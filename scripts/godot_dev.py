@@ -71,6 +71,25 @@ def env_off(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("0", "false", "no", "off")
 
 
+def host() -> str:
+    """Agent host, set by set_host in lib.sh from the host's hook/MCP config."""
+    return os.environ.get("GODOT_DEV_HOST") or "claude"
+
+
+def emit_context(text: str) -> None:
+    """Print SessionStart context in the shape the host's hook runner reads."""
+    if host() == "codex":
+        print(text)
+        return
+    if host() == "cursor":
+        out: dict = {"additional_context": text}
+    elif host() == "copilot":
+        out = {"additionalContext": text}
+    else:  # Claude and Gemini
+        out = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}
+    print(json.dumps(out))
+
+
 def data_dir() -> Path:
     base = os.environ.get("CLAUDE_PLUGIN_DATA") or os.path.join(
         os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "godot-dev"
@@ -264,7 +283,7 @@ def codex_entry(path: Path) -> dict | None:
 
 def existing_entry(root: Path) -> tuple[str, dict] | None:
     """Another godot-ai MCP entry the user configured (dock Configure / claude mcp add)."""
-    if os.environ.get("GODOT_DEV_HOST") == "codex":
+    if host() == "codex":
         home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
         for scope, path in (("user", home / "config.toml"), ("project", root / ".codex" / "config.toml")):
             entry = codex_entry(path)
@@ -395,7 +414,7 @@ def prewarm(plan: dict) -> str:
     env = clean_env() | {"GODOT_DEV_MARKER": str(marker)}
     subprocess.Popen(["/bin/sh", "-c", script, "sh", *argv], stdout=log, stderr=log,
                      stdin=subprocess.DEVNULL, env=env, start_new_session=True)
-    retry = "start a new Codex session" if os.environ.get("GODOT_DEV_HOST") == "codex" else "reconnect godot-ai in /mcp"
+    retry = "start a new Codex session" if host() == "codex" else "reconnect godot-ai in /mcp"
     return f" First run: building the godot-ai environment in the background; if its tools are missing, {retry} in ~1 min."
 
 
@@ -411,7 +430,7 @@ def cmd_session_start() -> int:
              "Load the `godot` skill before any Godot work: GDScript, scenes, shaders, UI, tests, export, godot-ai MCP."]
     if (info["config_version"] or 0) < 5:
         lines.append("This looks like a Godot 3 project (config_version < 5): godot-ai and the Godot 4.7 rules do not apply as-is.")
-        print("\n".join(lines))
+        emit_context("\n".join(lines))
         return 0
     installed = addon_version(root)
     addon_line = ""
@@ -448,7 +467,7 @@ def cmd_session_start() -> int:
         if pin and installed and installed != "unknown" and pin != installed:
             mcp_line += f" Its pin godot-ai=={pin} differs from add-on v{installed}; the editor rejects mismatched backends — update that entry (dock Configure) or set GODOT_DEV_MCP_FORCE=1."
     lines.append(mcp_line)
-    print("\n".join(lines))
+    emit_context("\n".join(lines))
     return 0
 
 

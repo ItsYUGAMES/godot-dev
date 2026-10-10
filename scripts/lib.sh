@@ -58,3 +58,30 @@ mcp_stub() {
 		esac
 	done
 }
+
+# Export GODOT_DEV_HOST from the host name a hook/MCP config passes as $1; unknown names mean Claude.
+# hooks/hooks.json is shared by Claude and Gemini and passes "gemini" in both: Claude sets
+# CLAUDE_PLUGIN_ROOT for plugin hooks, Gemini does not.
+set_host() {
+	case "${1:-}" in
+	codex | cursor | copilot) export GODOT_DEV_HOST=$1 ;;
+	gemini) [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || export GODOT_DEV_HOST=gemini ;;
+	esac
+}
+
+# Print SessionStart context lines in the host's shape (mirrors emit_context in godot_dev.py).
+# Lines must not contain '"' or '\'.
+emit_context() {
+	local body
+	if [ "${GODOT_DEV_HOST:-}" = codex ]; then
+		printf '%s\n' "$@"
+		return
+	fi
+	body=$(printf '%s\\n' "$@")
+	body=${body%\\n}
+	case "${GODOT_DEV_HOST:-}" in
+	cursor) printf '{"additional_context": "%s"}\n' "$body" ;;
+	copilot) printf '{"additionalContext": "%s"}\n' "$body" ;;
+	*) printf '{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "%s"}}\n' "$body" ;;
+	esac
+}

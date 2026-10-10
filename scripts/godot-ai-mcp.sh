@@ -4,7 +4,7 @@
 set -u
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$DIR/lib.sh"
-[ "${1:-}" = codex ] && export GODOT_DEV_HOST=codex  # passed by the Codex hook/MCP config
+set_host "${1:-}"
 
 if ! find_godot_root >/dev/null || ! pick_python; then
 	mcp_stub
