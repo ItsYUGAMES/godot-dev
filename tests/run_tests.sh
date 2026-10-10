@@ -181,5 +181,20 @@ mkdir -p "$P/scripts/deep"
 out=$(hook "$P/scripts/deep")
 check "subdirectory: root found from nested dir" 'printf "%s" "$out" | grep -q "Godot 4.7 project detected"' "$out"
 
+# 9. Host manifests.
+js() { python3 -I -c "import json,sys; d=json.load(open(sys.argv[1], encoding='utf-8')); print(eval(sys.argv[2]))" "$PLUGIN/$1" "$2"; }
+hk=$(js hooks/hooks.json 'd["hooks"]["SessionStart"][0]')
+check "hooks.json: no matcher, no timeout (Gemini exact-match, ms vs s)" \
+	'! printf "%s" "$hk" | grep -q -E "matcher|timeout"' "$hk"
+hcmd=$(js hooks/hooks.json 'd["hooks"]["SessionStart"][0]["hooks"][0]["command"]')
+o=$(cd "$P" && unset extensionPath && CLAUDE_PLUGIN_ROOT="$PLUGIN" bash -c "$hcmd" | ctx)
+check "hooks.json: runs under Claude (extensionPath unset)" 'printf "%s" "$o" | grep -q "Godot 4.7 project detected"' "$o"
+gcmd=$(python3 -I -c 'import sys; print(sys.argv[1].replace("${extensionPath}", sys.argv[2]))' "$hcmd" "$PLUGIN")
+o=$(cd "$P" && unset CLAUDE_PLUGIN_ROOT && bash -c "$gcmd")
+check "hooks.json: runs under Gemini (extensionPath substituted, CLAUDE_PLUGIN_ROOT unset)" \
+	'[ "$(field "$o" "d[\"hookSpecificOutput\"][\"hookEventName\"]")" = SessionStart ]' "$o"
+check "gemini-extension.json: name, MCP cwd and launcher" \
+	'[ "$(js gemini-extension.json "d[\"name\"]")" = godot-dev ] && [ "$(js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"cwd\"]")" = "\${workspacePath}" ] && js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"args\"]" | grep -q "godot-ai-mcp.sh.*gemini"'
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
