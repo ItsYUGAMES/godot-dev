@@ -228,6 +228,31 @@ gcmd=$(python3 -I -c 'import sys; print(sys.argv[1].replace("${extensionPath}", 
 o=$(cd "$P" && unset CLAUDE_PLUGIN_ROOT && bash -c "$gcmd")
 check "hooks.json: runs under Gemini (extensionPath substituted, CLAUDE_PLUGIN_ROOT unset)" \
 	'[ "$(field "$o" "d[\"hookSpecificOutput\"][\"hookEventName\"]")" = SessionStart ]' "$o"
+for f in .cursor-plugin/plugin.json .cursor-plugin/marketplace.json .cursor-mcp.json hooks/cursor-hooks.json \
+	.plugin/plugin.json .copilot-mcp.json hooks/copilot-hooks.json gemini-extension.json; do
+	check "manifest: $f is valid JSON" 'js "$f" "1" >/dev/null 2>&1'
+done
+for spec in ".cursor-plugin/plugin.json skills mcpServers hooks logo" ".plugin/plugin.json skills mcpServers hooks"; do
+	set -- $spec; m=$1; shift
+	for k in "$@"; do
+		rel=$(js "$m" "d[\"$k\"]")
+		check "manifest: $m $k -> $rel exists" '[ -n "$rel" ] && [ -e "$PLUGIN/$rel" ]' "$rel"
+	done
+done
+# Run each host's MCP and hook command with that host's placeholder substituted, as the host would.
+sub() { python3 -I -c 'import sys; print(sys.argv[1].replace(sys.argv[2], sys.argv[3]))' "$1" "$2" "$PLUGIN"; }
+for spec in 'cursor .cursor-mcp.json ${CURSOR_PLUGIN_ROOT} hooks/cursor-hooks.json d["hooks"]["sessionStart"][0]["command"] additional_context' \
+	'copilot .copilot-mcp.json ${PLUGIN_ROOT} hooks/copilot-hooks.json d["hooks"]["sessionStart"][0]["bash"] additionalContext'; do
+	set -- $spec; h=$1 mcp=$2 ph=$3 hooks=$4 path=$5 key=$6
+	args=$(js "$mcp" "' '.join(d['mcpServers']['godot-ai']['args'])")
+	check "$h: MCP runs the launcher with host $h" 'printf "%s" "$args" | grep -q "scripts/godot-ai-mcp.sh $h$"' "$args"
+	pl=$(cd "$P" && GODOT_DEV_MCP_DRY_RUN=1 HOME="$H" USERPROFILE="$UP" bash $(sub "$args" "$ph"))
+	check "$h: MCP command resolves to an active plan" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
+	cmd=$(sub "$(js "$hooks" "$path")" "$ph")
+	o=$(cd "$PLUGIN" && CLAUDE_PROJECT_DIR="$P" bash -c "$cmd")
+	check "$h: hook from plugin cwd finds the project via CLAUDE_PROJECT_DIR" \
+		'field "$o" "d[\"$key\"]" | grep -q "Godot 4.7 project detected"' "$o"
+done
 check "gemini-extension.json: name, MCP cwd and launcher" \
 	'[ "$(js gemini-extension.json "d[\"name\"]")" = godot-dev ] && [ "$(js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"cwd\"]")" = "\${workspacePath}" ] && js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"args\"]" | grep -q "godot-ai-mcp.sh.*gemini"'
 
