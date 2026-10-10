@@ -1,5 +1,7 @@
 # godot-dev
 
+English | [简体中文](README.zh-CN.md)
+
 A Claude Code plugin for building games in Godot 4.7.
 
 It adds three things. There is one skill that Claude loads when you work on a Godot project; it
