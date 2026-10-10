@@ -118,6 +118,41 @@ pl=$(codex_plan "$P")
 check "codex: project .codex/config.toml entry detected" 'printf "%s" "$pl" | grep -q "project scope"' "$pl"
 rm -r "$P/.codex"
 
+# 4d. Cursor, Gemini, Copilot: dedupe reads each host's own MCP config (user and project scope).
+H="$WORK/home"; mkdir -p "$H"
+UP=$(command -v cygpath >/dev/null && cygpath -w "$H" || printf '%s' "$H")
+host_plan() { (cd "$P" && HOME="$H" USERPROFILE="$UP" GODOT_DEV_MCP_DRY_RUN=1 bash "$PLUGIN/scripts/godot-ai-mcp.sh" "$1"); }
+entry='{"mcpServers":{"godot-ai":{"command":"uvx","args":["--from","godot-ai==4.2.3","godot-ai","attach"]}}}'
+for spec in "cursor .cursor/mcp.json .cursor/mcp.json" "gemini .gemini/settings.json .gemini/settings.json" \
+	"copilot .copilot/mcp-config.json .github/mcp.json"; do
+	set -- $spec; h=$1 user=$2 proj=$3
+	mkdir -p "$(dirname "$H/$user")"; printf '%s' "$entry" > "$H/$user"
+	pl=$(host_plan "$h")
+	check "$h: inactive with user-scope godot-ai, pin read" \
+		'[ "$(field "$pl" "d[\"active\"]")" = False ] && printf "%s" "$pl" | grep -q "user scope" && [ "$(field "$pl" "d[\"other_pin\"]")" = 4.2.3 ]' "$pl"
+	for other in claude codex cursor gemini copilot; do
+		[ "$other" = "$h" ] && continue
+		[ "$other" = claude ] && other=""
+		pl=$(host_plan "$other")
+		check "$h config ignored by ${other:-claude}" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
+	done
+	rm "$H/$user"
+	mkdir -p "$(dirname "$P/$proj")"; printf '%s' "$entry" > "$P/$proj"
+	pl=$(host_plan "$h")
+	check "$h: project-scope entry detected" 'printf "%s" "$pl" | grep -q "project scope"' "$pl"
+	rm "$P/$proj"
+done
+printf '{"godot-ai":{"command":"x"}}' > "$P/.mcp.json"
+pl=$(host_plan copilot)
+check "copilot: bare-format project .mcp.json detected" 'printf "%s" "$pl" | grep -q "project scope"' "$pl"
+rm "$P/.mcp.json"
+rm -rf "$P/.cursor" "$P/.gemini" "$P/.github"
+# Task 1's "gemini arg under Claude" check needs a Gemini entry to tell the configs apart.
+mkdir -p "$H/.gemini"; printf '%s' "$entry" > "$H/.gemini/settings.json"
+o=$(cd "$P" && HOME="$H" USERPROFILE="$UP" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/scripts/session-start.sh" gemini | ctx)
+check "gemini arg under Claude ignores Gemini settings" 'printf "%s" "$o" | grep -q "bundled server active"' "$o"
+rm "$H/.gemini/settings.json"
+
 # 4c. Hook output shape per host.
 shape() { (cd "$1" && bash "$PLUGIN/scripts/session-start.sh" ${2:+"$2"}); }
 o=$(shape "$P" cursor)

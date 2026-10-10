@@ -281,8 +281,25 @@ def codex_entry(path: Path) -> dict | None:
     return {"args": re.findall(r"""["']([^"']*)["']""", args.group(1)) if args else []}
 
 
+# MCP config files of the JSON-configured hosts, as (scope, path relative to home or project root).
+# Cursor: cursor.com/docs/context/mcp; Gemini: geminicli.com/docs/get-started/configuration;
+# Copilot CLI: docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers
+HOST_MCP_CONFIGS = {
+    "cursor": [("user", ".cursor/mcp.json"), ("project", ".cursor/mcp.json")],
+    "gemini": [("user", ".gemini/settings.json"), ("project", ".gemini/settings.json")],
+    "copilot": [("user", ".copilot/mcp-config.json"), ("project", ".mcp.json"), ("project", ".github/mcp.json")],
+}
+
+
 def existing_entry(root: Path) -> tuple[str, dict] | None:
     """Another godot-ai MCP entry the user configured (dock Configure / claude mcp add)."""
+    if host() in HOST_MCP_CONFIGS:
+        for scope, rel in HOST_MCP_CONFIGS[host()]:
+            data = _load_json((Path.home() if scope == "user" else root) / rel)
+            servers = data.get("mcpServers", data)  # Copilot project files may omit the wrapper
+            if isinstance(servers, dict) and isinstance(servers.get("godot-ai"), dict):
+                return scope, servers["godot-ai"]
+        return None
     if host() == "codex":
         home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
         for scope, path in (("user", home / "config.toml"), ("project", root / ".codex" / "config.toml")):
