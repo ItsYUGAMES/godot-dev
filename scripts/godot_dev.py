@@ -251,8 +251,26 @@ def _load_json(path: Path) -> dict:
         return {}
 
 
+def codex_entry(path: Path) -> dict | None:
+    """The [mcp_servers.godot-ai] table of a Codex config.toml, as {"args": [...]}."""
+    # ponytail: regex instead of tomllib (3.11+); reads only the header and quoted args.
+    match = re.search(r"""^\[mcp_servers\.(?:godot-ai|"godot-ai"|'godot-ai')\]\s*$(.*?)(?=^\[|\Z)""",
+                      read_text(path), re.M | re.S)
+    if not match:
+        return None
+    args = re.search(r"^args\s*=\s*\[(.*?)\]", match.group(1), re.M | re.S)
+    return {"args": re.findall(r"""["']([^"']*)["']""", args.group(1)) if args else []}
+
+
 def existing_entry(root: Path) -> tuple[str, dict] | None:
     """Another godot-ai MCP entry the user configured (dock Configure / claude mcp add)."""
+    if os.environ.get("GODOT_DEV_HOST") == "codex":
+        home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+        for scope, path in (("user", home / "config.toml"), ("project", root / ".codex" / "config.toml")):
+            entry = codex_entry(path)
+            if entry is not None:
+                return scope, entry
+        return None
     config = _load_json(claude_config_path())
     servers = config.get("mcpServers") or {}
     if isinstance(servers, dict) and "godot-ai" in servers:
@@ -377,7 +395,8 @@ def prewarm(plan: dict) -> str:
     env = clean_env() | {"GODOT_DEV_MARKER": str(marker)}
     subprocess.Popen(["/bin/sh", "-c", script, "sh", *argv], stdout=log, stderr=log,
                      stdin=subprocess.DEVNULL, env=env, start_new_session=True)
-    return " First run: building the godot-ai environment in the background; if its tools are missing, reconnect godot-ai in /mcp in ~1 min."
+    retry = "start a new Codex session" if os.environ.get("GODOT_DEV_HOST") == "codex" else "reconnect godot-ai in /mcp"
+    return f" First run: building the godot-ai environment in the background; if its tools are missing, {retry} in ~1 min."
 
 
 # ---------------------------------------------------------------- commands
