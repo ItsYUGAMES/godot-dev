@@ -15,8 +15,8 @@ bad() { FAIL=$((FAIL + 1)); printf 'FAIL %s\n' "$1"; [ -n "${2:-}" ] && printf '
 check() { if eval "$2"; then ok "$1"; else bad "$1" "${3:-}"; fi; }
 
 # Isolated environment: no real Claude config, plugin data in WORK, prewarm marked done.
-export CLAUDE_CONFIG_DIR="$WORK/claude" CLAUDE_PLUGIN_DATA="$WORK/data"
-mkdir -p "$CLAUDE_CONFIG_DIR" "$CLAUDE_PLUGIN_DATA"
+export CLAUDE_CONFIG_DIR="$WORK/claude" CLAUDE_PLUGIN_DATA="$WORK/data" CODEX_HOME="$WORK/codex"
+mkdir -p "$CLAUDE_CONFIG_DIR" "$CLAUDE_PLUGIN_DATA" "$CODEX_HOME"
 touch "$CLAUDE_PLUGIN_DATA/prewarmed-4.3.0" "$CLAUDE_PLUGIN_DATA/prewarmed-4.2.3"
 export GODOT_DEV_RELEASE_BASE_URL="file://$RELEASE"
 unset GODOT_DEV_AUTO_INSTALL GODOT_DEV_MCP GODOT_DEV_MCP_FORCE GODOT_DEV_TELEMETRY GODOT_DEV_MCP_PORT
@@ -83,6 +83,31 @@ printf '{"mcpServers":{"godot-ai":{"command":"x"}}}' > "$P/.mcp.json"
 pl=$(plan "$P")
 check "dedupe: project .mcp.json entry detected" 'printf "%s" "$pl" | grep -q "project scope"' "$pl"
 rm "$P/.mcp.json"
+
+# 4b. Codex host: dedupe reads Codex config.toml instead of ~/.claude.json.
+codex_plan() { (cd "$1" && GODOT_DEV_MCP_DRY_RUN=1 bash "$PLUGIN/scripts/godot-ai-mcp.sh" codex); }
+pl=$(codex_plan "$P")
+check "codex: active without a Codex godot-ai entry" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
+printf '[mcp_servers.godot-ai]\ncommand = "uvx"\nargs = ["-c", "run(sys.argv[1:])", \047C:/Users/u/uvx.exe\047, "--from", "godot-ai==4.2.3", "godot-ai", "attach"]\n\n[mcp_servers.godot-ai.env]\nX = "1"\n' > "$CODEX_HOME/config.toml"
+pl=$(codex_plan "$P")
+check "codex: inactive when config.toml has godot-ai" \
+	'[ "$(field "$pl" "d[\"active\"]")" = False ] && printf "%s" "$pl" | grep -q "user scope"' "$pl"
+check "codex: reads the pin from config.toml" '[ "$(field "$pl" "d[\"other_pin\"]")" = 4.2.3 ]' "$pl"
+pl=$(plan "$P")
+check "claude: ignores Codex config.toml" '[ "$(field "$pl" "d[\"active\"]")" = True ]' "$pl"
+out=$(cd "$P" && bash "$PLUGIN/scripts/session-start.sh" codex)
+check "codex: hook warns about pin mismatch" 'printf "%s" "$out" | grep -q "godot-ai==4.2.3 differs from add-on v4.3.0"' "$out"
+# The .codex-mcp.json command as Codex runs it: no ${} expansion, cwd = session dir.
+mkdir -p "$CODEX_HOME/plugins/cache/m/godot-dev/0.0.0"; cp -R "$PLUGIN/scripts" "$CODEX_HOME/plugins/cache/m/godot-dev/0.0.0/"
+cmd=$(python3 -I -c "import json,sys; print(json.load(open(sys.argv[1]))['mcpServers']['godot-ai']['args'][1])" "$PLUGIN/.codex-mcp.json")
+pl=$(cd "$P" && GODOT_DEV_MCP_DRY_RUN=1 bash -c "$cmd")
+check "codex: .codex-mcp.json finds the launcher and passes the host" \
+	'[ "$(field "$pl" "d[\"active\"]")" = False ] && printf "%s" "$pl" | grep -q "user scope"' "$pl"
+rm "$CODEX_HOME/config.toml"
+mkdir -p "$P/.codex"; printf '[mcp_servers."godot-ai"]\ncommand = "x"\n' > "$P/.codex/config.toml"
+pl=$(codex_plan "$P")
+check "codex: project .codex/config.toml entry detected" 'printf "%s" "$pl" | grep -q "project scope"' "$pl"
+rm -r "$P/.codex"
 
 # 5. Opt-out, Godot 3 and 4.6 projects are not touched.
 Q="$WORK/optout"; new_project "$Q" 5 '"4.7"'
