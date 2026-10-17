@@ -24,6 +24,11 @@
   - **GdUnit4 v6**: `GODOT_BIN=… ./addons/gdUnit4/runtest.sh -a res://tests -c` → 0 pass,
     100 failures, 101 warnings (decide policy); HTML/JUnit reports.
   - **godot-ai** `test_run`: `res://tests/test_*.gd` extending `McpTestSuite` (see `godot-ai.md`).
+  - **No framework and no approval to add one**: a SceneTree runner (`extends SceneTree`,
+    `_initialize()` → `_run.call_deferred()`, `await` each `test_*`, `quit(1)` on any failure or
+    zero tests). A SCRIPT ERROR inside a test method aborts only that method and the runner still
+    counts it as passed, so the pass condition is: exit 0 **and** no `SCRIPT ERROR` in the output
+    (`godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee out.log; ! grep -q "SCRIPT ERROR" out.log`).
 - Use the framework and test root the repo already has (`test/` is the GUT/GdUnit4 default;
   godot-ai's runner needs `tests/`); never split suites across both; don't install a framework
   without approval.

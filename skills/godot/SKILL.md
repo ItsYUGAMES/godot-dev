@@ -7,7 +7,8 @@ description: Use when working on a Godot 4 game or project - GDScript, .gd/.tscn
 
 Read this file, then only the reference rows your task needs (one level deep; never bulk-load).
 `GD` below means `python3 "<base directory of this skill>/scripts/gd.py"` (the base directory is
-shown when the skill loads; if python3 is missing use `uv run --no-project python`). It is the
+shown when the skill loads). If `python3 --version` fails or prints "Python was not found" (the
+Microsoft Store alias on Windows), use `python`, else `uv run --no-project python`. It is the
 verification gate: run it, don't read it.
 
 ## 0. Ground truth before code

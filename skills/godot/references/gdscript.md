@@ -81,6 +81,8 @@
 | `Tween` node, `YSort`, `Navigation2D` | `create_tween()`, `y_sort_enabled`, NavigationServer/agents |
 | `File`, `Directory`, `OS.get_ticks_msec` | `FileAccess`, `DirAccess`, `Time.get_ticks_msec` |
 | `update()`, `pause_mode`, `BUTTON_LEFT`, `PoolStringArray` | `queue_redraw()`, `process_mode`, `MOUSE_BUTTON_LEFT`, `PackedStringArray` |
+| `rand_range(a, b)` | `randf_range(a, b)` / `randi_range(a, b)` (or a seeded RandomNumberGenerator) |
+| `deg2rad`, `rad2deg`, `stepify` | `deg_to_rad`, `rad_to_deg`, `snapped` / `snappedf` |
 | `rpc("f")`, `remote`/`master`/`puppet` | `f.rpc()`, `@rpc("any_peer")` etc. |
 | `rect_size`, `margin_*`, `extents` | `size`, `offset_*`, `size` (full size) |
 | `JSON.parse(text).result` | `JSON.parse_string(text)` or `JSON.new().parse()` + `.data` |

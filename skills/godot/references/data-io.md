@@ -33,22 +33,32 @@
 
 ```gdscript
 const SAVE_PATH := "user://save.json"
+const SAVE_VERSION := 2
 
 func save_game(state: Dictionary) -> Error:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var payload: Dictionary = state.duplicate(true)
+	payload["version"] = SAVE_VERSION
+	var tmp_path := SAVE_PATH + ".tmp"
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	file.store_string(JSON.stringify(state))
-	return OK
+	var written := file.store_string(JSON.stringify(payload))
+	file.close()
+	if not written:
+		return ERR_FILE_CANT_WRITE
+	return DirAccess.rename_absolute(tmp_path, SAVE_PATH)  # overwrites; verified on 4.7 Windows
 
 func load_game() -> Dictionary:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return {}
+	var source := SAVE_PATH
+	if not FileAccess.file_exists(source):
+		source = SAVE_PATH + ".tmp"  # interrupted save: the rename never happened
+		if not FileAccess.file_exists(source):
+			return {}
 	var json := JSON.new()
-	if json.parse(FileAccess.get_file_as_string(SAVE_PATH)) != OK or json.data is not Dictionary:
+	if json.parse(FileAccess.get_file_as_string(source)) != OK or json.data is not Dictionary:
 		push_error("Bad save: %s" % json.get_error_message())
 		return {}
-	return json.data
+	return migrate(json.data)  # dispatch on int(data.get("version", 1)); JSON numbers are floats
 ```
 
 ## Resources at runtime
