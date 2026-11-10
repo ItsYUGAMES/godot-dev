@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "godot-ai": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "exec bash \"$(ls -d \"${CODEX_HOME:-$HOME/.codex}\"/plugins/cache/*/godot-dev/*/scripts | tail -n 1)/godot-ai-mcp.sh\" codex"
+      ]
+    }
+  }
+}
