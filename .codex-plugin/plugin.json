@@ -1,6 +1,6 @@
 {
   "name": "godot-dev",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Godot 4.7 game development for Codex: one context-light router skill with on-demand references, headless verification gates (autoload-aware check, ClassDB API lookup), cross-validated standards, and the godot-ai MCP auto-installed in Godot projects.",
   "author": {
     "name": "Zhenyu Yang"

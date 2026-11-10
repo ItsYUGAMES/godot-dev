@@ -1,0 +1,12 @@
+{
+  "name": "godot-dev",
+  "version": "0.3.0",
+  "description": "Godot 4.7 game development: a context-light router skill, headless verification gates, and the godot-ai MCP server auto-installed in Godot projects.",
+  "mcpServers": {
+    "godot-ai": {
+      "command": "bash",
+      "args": ["${extensionPath}${/}scripts${/}godot-ai-mcp.sh", "gemini"],
+      "cwd": "${workspacePath}"
+    }
+  }
+}

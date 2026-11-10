@@ -1,2 +1,4 @@
 # LF everywhere: bash scripts break on CRLF, and scripts/vendor/release_verify.py is pinned by SHA-256.
 * text=auto eol=lf
+# Batch files: cmd.exe misreads some LF-only scripts.
+*.cmd text eol=crlf

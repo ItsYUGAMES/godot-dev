@@ -1,0 +1,13 @@
+{
+  "name": "godot-dev",
+  "owner": {
+    "name": "Zhenyu Yang"
+  },
+  "plugins": [
+    {
+      "name": "godot-dev",
+      "source": "./",
+      "description": "Godot 4.7 router skill, engine-backed verification scripts, and the godot-ai MCP server."
+    }
+  ]
+}

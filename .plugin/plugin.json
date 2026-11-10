@@ -1,0 +1,15 @@
+{
+  "name": "godot-dev",
+  "version": "0.3.0",
+  "description": "Godot 4.7 game development: a context-light router skill, headless verification gates, and the godot-ai MCP server auto-installed in Godot projects.",
+  "author": {
+    "name": "Zhenyu Yang"
+  },
+  "homepage": "https://github.com/ItsYUGAMES/godot-dev",
+  "repository": "https://github.com/ItsYUGAMES/godot-dev",
+  "license": "MIT",
+  "keywords": ["godot", "gdscript", "gamedev", "mcp", "godot-ai"],
+  "skills": "skills/",
+  "mcpServers": ".copilot-mcp.json",
+  "hooks": "hooks/copilot-hooks.json"
+}

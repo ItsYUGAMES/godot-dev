@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "godot-ai": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["${PLUGIN_ROOT}/scripts/godot-ai-mcp.sh", "copilot"]
+    }
+  }
+}
