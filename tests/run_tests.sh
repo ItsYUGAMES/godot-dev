@@ -279,5 +279,20 @@ check "README.zh-CN.md: same headings count and bash blocks as README.md" \
 check "gemini-extension.json: name, MCP cwd and launcher" \
 	'[ "$(js gemini-extension.json "d[\"name\"]")" = godot-dev ] && [ "$(js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"cwd\"]")" = "\${workspacePath}" ] && js gemini-extension.json "d[\"mcpServers\"][\"godot-ai\"][\"args\"]" | grep -q "godot-ai-mcp.sh.*gemini"'
 
+# 10. Windows: Codex runs hooks through cmd.exe with the Windows PATH, which usually has Git's cmd\
+# folder (git.exe only) but not bash. Run the Codex commandWindows the same way.
+if [ -x /c/Windows/System32/cmd.exe ] && command -v cygpath >/dev/null; then
+	wcmd=$(js hooks/codex-hooks.json 'd["hooks"]["SessionStart"][0]["hooks"][0].get("commandWindows", "")')
+	wcmd=${wcmd//\$\{CLAUDE_PLUGIN_ROOT\}/$(cygpath -w "$PLUGIN")}
+	printf '@%s\r\n' "$wcmd" > "$WORK/codex-hook.cmd"
+	winhook() { (cd "$1" && PATH="/c/Windows/System32:/c/Windows" /c/Windows/System32/cmd.exe //d //c "$(cygpath -w "$WORK/codex-hook.cmd")"); }
+	o=$(winhook "$P"); rc=$?
+	check "windows: Codex hook without bash on PATH reports the project" \
+		'[ -n "$wcmd" ] && [ "$rc" = 0 ] && printf "%s" "$o" | grep -q "project detected"' "rc=$rc cmd=$wcmd out=$o"
+	o=$(winhook "$WORK/plain"); rc=$?
+	check "windows: Codex hook without bash on PATH is silent outside Godot" \
+		'[ -n "$wcmd" ] && [ "$rc" = 0 ] && [ -z "$o" ]' "rc=$rc out=$o"
+fi
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
