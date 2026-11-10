@@ -92,6 +92,28 @@ git checkout -q -- . && git clean -qfd
 printf '\n\nfunc total() -> int:\n\tvar sum: int = 0\n\tfor value: int in items:\n\t\tsum += value\n\treturn sum\n' >> game/main.gd
 out=$("${GD[@]}" hygiene 2>&1); code=$?
 check "clean: PASS (only the leaky-preset warning)" '[ $code -eq 0 ] && printf "%s" "$out" | grep -q "RESULT: PASS"' "$out"
+out=$("${GD[@]}" hygiene --base no_such_rev 2>&1); code=$?
+check "bad base: NOT ASSESSED (exit 2), not an empty-diff PASS" '[ $code -eq 2 ] && printf "%s" "$out" | grep -q "RESULT: NOT ASSESSED"' "$out"
+
+# --- check: UTF-8 engine output on a non-UTF-8 console codec (GBK Windows), wrong parent path.
+# Godot prints UTF-8; a localized editor also prints its progress text. Decoding it with the
+# locale codec raised in subprocess's reader thread and the step saw empty output (fail-open).
+git checkout -q -- . && git clean -qfd
+printf '\n\nfunc _enter_tree() -> void:\n\tprint("non-ascii output ✓ §")\n' >> game/main.gd
+out=$("${GD[@]}" check --smoke --frames 10 2>&1); code=$?
+check "check: non-ASCII engine output is decoded (smoke ran, no reader-thread Traceback)" \
+	'[ $code -eq 0 ] && printf "%s" "$out" | grep -q "\[smoke\] OK" && ! printf "%s" "$out" | grep -q Traceback' "$out"
+python3 -I - <<'PYEOF'
+p="game/main.gd"; s=open(p,encoding="utf-8").read()
+open(p,"w",encoding="utf-8").write(s.replace("\tpass\n", "\tpush_error(\"boom ✓\")\n", 1))
+PYEOF
+out=$("${GD[@]}" check --no-import --smoke --frames 10 2>&1); code=$?
+check "check: echoed error line with a char the console codec lacks is reported, not a crash" \
+	'[ $code -eq 1 ] && printf "%s" "$out" | grep -q "ERROR: boom" && ! printf "%s" "$out" | grep -q Traceback' "$out"
+printf '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n\n[node name="Child" type="Node" parent="Missing"]\n' > game/bad_parent.tscn
+out=$("${GD[@]}" check --no-import 2>&1); code=$?
+check "check: wrong parent= path (WARNING only in Godot) fails the gate" '[ $code -eq 1 ] && printf "%s" "$out" | grep -q "has vanished when instantiating"' "$out"
+git checkout -q -- . && git clean -qfd
 
 # --- release
 out=$("${GD[@]}" release --preset Missing 2>&1); code=$?

@@ -34,7 +34,12 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ERROR_RE = re.compile(r"^(SCRIPT ERROR|ERROR|Parse Error|USER ERROR)\b")
+# Echoed engine lines may hold characters the console codec lacks; never crash on a report line.
+for _stream in (sys.stdout, sys.stderr):
+    _stream.reconfigure(errors="replace")
+# A wrong `parent=` path in a .tscn is only a WARNING: Godot re-parents the node to the root.
+ERROR_RE = re.compile(r"^(SCRIPT ERROR|ERROR|Parse Error|USER ERROR)\b"
+                      r"|^WARNING: .*has vanished when instantiating")
 # Engine noise seen on valid projects with 4.7 headless runs.
 NOISE = (
     'Parameter "singleton" is null. at: is_cmdline_mode',
@@ -64,9 +69,10 @@ def find_godot(explicit: str | None) -> str:
 
 def run(cmd: list[str], timeout: int) -> tuple[int, str]:
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
-                              stdin=subprocess.DEVNULL)
-        return proc.returncode, proc.stdout + proc.stderr
+        # Godot prints UTF-8; the locale codec (GBK on Chinese Windows) would raise mid-read.
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=timeout, stdin=subprocess.DEVNULL)
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
     except subprocess.TimeoutExpired as exc:
         out = (exc.stdout or b"") + (exc.stderr or b"")
         text = out.decode("utf-8", "replace") if isinstance(out, bytes) else out
@@ -173,8 +179,9 @@ SKIP_RE = re.compile(r"\b(pending|skip|skip_test|pass_test)\s*\(|@ignore|\.skip\
 
 
 def git(root: Path, *args: str) -> tuple[int, str]:
-    proc = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
-    return proc.returncode, proc.stdout
+    proc = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
+    return proc.returncode, proc.stdout or ""
 
 
 def added_lines(root: Path, base: str) -> dict[str, list[tuple[int, str]]]:
@@ -225,6 +232,12 @@ def cmd_hygiene(args: argparse.Namespace) -> int:
         print("RESULT: NOT ASSESSED")
         return 2
     repo = Path(top.strip())
+    # `git diff <bad rev>` fails silently and the scan would pass on an empty diff.
+    code, _ = git(repo, "rev-parse", "--verify", "--quiet", args.base + "^{commit}")
+    if code != 0:
+        print(f"[hygiene] NOT ASSESSED: --base {args.base} is not a commit in this repository")
+        print("RESULT: NOT ASSESSED")
+        return 2
     prefix = str(root.relative_to(repo)) + "/" if root != repo else ""
 
     def rel(path: str) -> str:
@@ -273,7 +286,7 @@ def cmd_hygiene(args: argparse.Namespace) -> int:
         if ".godot" in uid.parts:
             continue
         if not uid.with_suffix("").exists():
-            fails.append(f"orphan .uid (its script was deleted/moved): {uid.relative_to(root)}")
+            fails.append(f"orphan .uid (its script was deleted/moved): {uid.relative_to(root).as_posix()}")
     _c, tracked = git(repo, "ls-files", "--", prefix + ".godot", prefix + "*export_credentials.cfg")
     for path in tracked.splitlines():
         fails.append(f"must not be tracked: {rel(path)}")
