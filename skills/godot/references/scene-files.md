@@ -3,7 +3,9 @@
 Prefer the editor or godot-ai (`node_create`, `node_set_property`, `batch_execute`,
 `scene_save`) — especially when the editor has the scene open: its in-memory copy overwrites
 your file on save. Hand-edit only closed scenes, keep edits small, then run `GD check`
-(it instantiates every scene; `load()` alone accepts broken hierarchies).
+(it instantiates every scene; `load()` alone accepts broken hierarchies). A wrong `parent=` path
+is only a WARNING in Godot ("has vanished when instantiating") and the node is silently moved to
+the root: raw `--import` passes it, `GD check` fails it.
 
 ## Structure (order matters)
 ```
